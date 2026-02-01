@@ -16,6 +16,9 @@ import matplotlib
 matplotlib.use("Agg")  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+from PIL import Image
+from scipy.ndimage import gaussian_filter
 from mcp.server import Server
 from mcp.types import TextContent, Tool
 
@@ -390,6 +393,121 @@ class ChartGenerator:
         ax.grid(True, alpha=0.3, axis="y")
 
         return self._save_chart(fig, "histogram", return_base64)
+
+    def defect_heatmap(
+        self,
+        image_path: str,
+        ng_coordinates: list[dict[str, int]],
+        title: str = "Defect Heatmap",
+        sigma: float = 20.0,
+        alpha: float = 0.6,
+        colorbar_label: str = "Defect Density",
+        return_base64: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Generate a defect heatmap overlay on a product image.
+
+        This method takes an image and a list of NG (defect) pixel coordinates,
+        then generates a heatmap showing defect density. Redder areas indicate
+        higher defect frequency.
+
+        Args:
+            image_path: Path to the product image file.
+            ng_coordinates: List of defect coordinates, each with 'x' and 'y' keys.
+                           Example: [{"x": 100, "y": 200}, {"x": 150, "y": 250}]
+            title: Chart title.
+            sigma: Gaussian blur sigma for smoothing the heatmap. Higher values
+                   create smoother, more spread out heat regions.
+            alpha: Transparency of the heatmap overlay (0.0-1.0).
+            colorbar_label: Label for the colorbar.
+            return_base64: Whether to return chart as base64.
+
+        Returns:
+            Dictionary with file path, statistics, and optional base64 data.
+        """
+        # Load the image
+        try:
+            img = Image.open(image_path)
+            img_array = np.array(img)
+        except Exception as e:
+            return {"success": False, "error": f"Failed to load image: {str(e)}"}
+
+        height, width = img_array.shape[:2]
+
+        # Create a 2D array to accumulate defect counts
+        heatmap_data = np.zeros((height, width), dtype=np.float64)
+
+        # Mark each NG coordinate
+        valid_points = 0
+        for coord in ng_coordinates:
+            x = coord.get("x", 0)
+            y = coord.get("y", 0)
+            # Ensure coordinates are within image bounds
+            if 0 <= x < width and 0 <= y < height:
+                heatmap_data[y, x] += 1
+                valid_points += 1
+
+        if valid_points == 0:
+            return {
+                "success": False,
+                "error": "No valid NG coordinates within image bounds",
+            }
+
+        # Apply Gaussian blur to create smooth heatmap
+        heatmap_smoothed = gaussian_filter(heatmap_data, sigma=sigma)
+
+        # Normalize to 0-1 range
+        if heatmap_smoothed.max() > 0:
+            heatmap_normalized = heatmap_smoothed / heatmap_smoothed.max()
+        else:
+            heatmap_normalized = heatmap_smoothed
+
+        # Create custom colormap: transparent -> yellow -> red
+        colors = [
+            (0, 0, 0, 0),       # Transparent for low values
+            (1, 1, 0, 0.3),     # Yellow with low alpha
+            (1, 0.5, 0, 0.6),   # Orange
+            (1, 0, 0, 0.9),     # Red for high values
+        ]
+        cmap = LinearSegmentedColormap.from_list("defect_heatmap", colors, N=256)
+
+        # Create the figure
+        fig, ax = plt.subplots(figsize=(12, 10))
+
+        # Display the original image
+        ax.imshow(img_array)
+
+        # Overlay the heatmap
+        heatmap_plot = ax.imshow(
+            heatmap_normalized,
+            cmap=cmap,
+            alpha=alpha,
+            interpolation="bilinear",
+        )
+
+        # Add colorbar
+        cbar = plt.colorbar(heatmap_plot, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label(colorbar_label, fontsize=10)
+
+        # Set title
+        ax.set_title(title, fontsize=14, fontweight="bold")
+        ax.axis("off")  # Hide axes for cleaner look
+
+        # Calculate statistics
+        stats = {
+            "total_ng_points": len(ng_coordinates),
+            "valid_ng_points": valid_points,
+            "image_size": {"width": width, "height": height},
+            "max_density_location": {
+                "y": int(np.unravel_index(heatmap_smoothed.argmax(), heatmap_smoothed.shape)[0]),
+                "x": int(np.unravel_index(heatmap_smoothed.argmax(), heatmap_smoothed.shape)[1]),
+            },
+        }
+
+        result = self._save_chart(fig, "defect_heatmap", return_base64)
+        result["statistics"] = stats
+
+        return result
 
 
 # Global chart generator instance

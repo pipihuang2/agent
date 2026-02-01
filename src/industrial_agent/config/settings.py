@@ -67,6 +67,33 @@ class Settings(BaseSettings):
         description="Directory for chart output",
     )
 
+    # MySQL Database Configuration
+    mysql_host: str = Field(
+        default="localhost",
+        description="MySQL server host",
+    )
+    mysql_port: int = Field(
+        default=3306,
+        description="MySQL server port",
+    )
+    mysql_user: str = Field(
+        default="root",
+        description="MySQL username",
+    )
+    mysql_password: Optional[str] = Field(
+        default=None,
+        description="MySQL password",
+    )
+    mysql_database: Optional[str] = Field(
+        default=None,
+        description="MySQL database name",
+    )
+
+    def get_mysql_url(self) -> str:
+        """Get MySQL connection URL for SQLAlchemy."""
+        password = self.mysql_password or ""
+        return f"mysql+pymysql://{self.mysql_user}:{password}@{self.mysql_host}:{self.mysql_port}/{self.mysql_database or ''}"
+
     def validate_config(self) -> None:
         """Validate configuration based on selected provider."""
         if self.model_provider == ModelProvider.DEEPSEEK:

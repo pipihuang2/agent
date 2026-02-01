@@ -40,7 +40,7 @@ class IndustrialAgent:
             model=self.model,
             system_prompt=SYSTEM_PROMPT,
             deps_type=AgentDependencies,
-            result_type=str,
+            output_type=str,
         )
 
         # Register tools
@@ -99,7 +99,7 @@ class IndustrialAgent:
         """
         deps = AgentDependencies(settings=self.settings)
         result = await self.agent.run(user_input, deps=deps)
-        return result.data
+        return result.output
 
     async def run_stream(self, user_input: str):
         """

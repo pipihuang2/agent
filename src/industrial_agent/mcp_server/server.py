@@ -42,6 +42,7 @@ class IndustrialMCPServer:
         from .tools.chart_generator import ChartGenerator, get_chart_generator
         from .tools.data_analysis import DataAnalyzer, get_analyzer
         from .tools.data_query import DataQueryManager, get_query_manager
+        from .tools.mysql_query import MySQLQueryManager, get_mysql_manager
 
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
@@ -410,6 +411,176 @@ class IndustrialMCPServer:
                         "required": ["data"],
                     },
                 ),
+                # Defect Heatmap Tool
+                Tool(
+                    name="generate_defect_heatmap",
+                    description="Generate a defect heatmap overlay on a product image. Takes NG (defect) pixel coordinates and creates a heatmap showing defect density - redder areas indicate higher defect frequency.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "image_path": {
+                                "type": "string",
+                                "description": "Path to the product image file (supports PNG, JPG, etc.)",
+                            },
+                            "ng_coordinates": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {"type": "integer", "description": "X pixel coordinate"},
+                                        "y": {"type": "integer", "description": "Y pixel coordinate"},
+                                    },
+                                    "required": ["x", "y"],
+                                },
+                                "description": "List of NG (defect) pixel coordinates. Example: [{\"x\": 100, \"y\": 200}, {\"x\": 150, \"y\": 250}]",
+                            },
+                            "title": {
+                                "type": "string",
+                                "description": "Chart title",
+                                "default": "Defect Heatmap",
+                            },
+                            "sigma": {
+                                "type": "number",
+                                "description": "Gaussian blur sigma for smoothing. Higher values create smoother heat regions.",
+                                "default": 20.0,
+                            },
+                            "alpha": {
+                                "type": "number",
+                                "description": "Heatmap transparency (0.0-1.0). Lower values make the heatmap more transparent.",
+                                "default": 0.6,
+                            },
+                            "colorbar_label": {
+                                "type": "string",
+                                "description": "Label for the colorbar",
+                                "default": "Defect Density",
+                            },
+                        },
+                        "required": ["image_path", "ng_coordinates"],
+                    },
+                ),
+                # MySQL Database Tools
+                Tool(
+                    name="mysql_test_connection",
+                    description="Test the MySQL database connection",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {},
+                    },
+                ),
+                Tool(
+                    name="mysql_list_tables",
+                    description="List all tables in the MySQL database",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {},
+                    },
+                ),
+                Tool(
+                    name="mysql_describe_table",
+                    description="Get the schema/structure of a MySQL table (column names, types, keys, etc.)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "table_name": {
+                                "type": "string",
+                                "description": "Name of the table to describe",
+                            },
+                        },
+                        "required": ["table_name"],
+                    },
+                ),
+                Tool(
+                    name="mysql_execute_query",
+                    description="Execute a SELECT SQL query on the MySQL database. Only SELECT queries are allowed for security.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "SQL SELECT query to execute",
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of rows to return",
+                                "default": 1000,
+                            },
+                        },
+                        "required": ["query"],
+                    },
+                ),
+                Tool(
+                    name="mysql_query_table",
+                    description="Query a MySQL table with optional filtering and sorting",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "table_name": {
+                                "type": "string",
+                                "description": "Name of the table to query",
+                            },
+                            "columns": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "List of columns to select (omit for all columns)",
+                            },
+                            "where": {
+                                "type": "string",
+                                "description": "WHERE clause conditions (without 'WHERE' keyword). Example: \"status = 'FAIL' AND temperature > 30\"",
+                            },
+                            "order_by": {
+                                "type": "string",
+                                "description": "ORDER BY clause (without 'ORDER BY' keyword). Example: \"timestamp DESC\"",
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of rows to return",
+                                "default": 1000,
+                            },
+                        },
+                        "required": ["table_name"],
+                    },
+                ),
+                Tool(
+                    name="mysql_get_table_stats",
+                    description="Get statistical summary (count, mean, min, max, std) for a numeric column in a MySQL table",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "table_name": {
+                                "type": "string",
+                                "description": "Name of the table",
+                            },
+                            "column": {
+                                "type": "string",
+                                "description": "Name of the numeric column to analyze",
+                            },
+                        },
+                        "required": ["table_name", "column"],
+                    },
+                ),
+                Tool(
+                    name="mysql_get_column_values",
+                    description="Get all values from a specific column (useful for feeding into analysis tools)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "table_name": {
+                                "type": "string",
+                                "description": "Name of the table",
+                            },
+                            "column": {
+                                "type": "string",
+                                "description": "Name of the column",
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum number of values to return",
+                                "default": 10000,
+                            },
+                        },
+                        "required": ["table_name", "column"],
+                    },
+                ),
             ]
 
         @self.server.call_tool()
@@ -525,6 +696,56 @@ class IndustrialMCPServer:
                     show_normal=arguments.get("show_normal", False),
                     usl=arguments.get("usl"),
                     lsl=arguments.get("lsl"),
+                )
+            elif name == "generate_defect_heatmap":
+                result = chart_generator.defect_heatmap(
+                    image_path=arguments["image_path"],
+                    ng_coordinates=arguments["ng_coordinates"],
+                    title=arguments.get("title", "Defect Heatmap"),
+                    sigma=arguments.get("sigma", 20.0),
+                    alpha=arguments.get("alpha", 0.6),
+                    colorbar_label=arguments.get("colorbar_label", "Defect Density"),
+                )
+
+            # MySQL Database Tools
+            elif name == "mysql_test_connection":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.test_connection()
+            elif name == "mysql_list_tables":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.list_tables()
+            elif name == "mysql_describe_table":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.describe_table(
+                    table_name=arguments["table_name"],
+                )
+            elif name == "mysql_execute_query":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.execute_query(
+                    query=arguments["query"],
+                    limit=arguments.get("limit", 1000),
+                )
+            elif name == "mysql_query_table":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.query_table(
+                    table_name=arguments["table_name"],
+                    columns=arguments.get("columns"),
+                    where=arguments.get("where"),
+                    order_by=arguments.get("order_by"),
+                    limit=arguments.get("limit", 1000),
+                )
+            elif name == "mysql_get_table_stats":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.get_table_stats(
+                    table_name=arguments["table_name"],
+                    column=arguments["column"],
+                )
+            elif name == "mysql_get_column_values":
+                mysql_manager = get_mysql_manager()
+                result = mysql_manager.get_column_values(
+                    table_name=arguments["table_name"],
+                    column=arguments["column"],
+                    limit=arguments.get("limit", 10000),
                 )
             else:
                 result = {"error": f"Unknown tool: {name}"}

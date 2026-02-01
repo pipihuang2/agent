@@ -2,6 +2,7 @@
 
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from industrial_agent.config import Settings, get_settings
 from industrial_agent.config.settings import ModelProvider
@@ -36,18 +37,24 @@ def get_model(settings: Settings | None = None) -> Model:
 def _create_deepseek_model(settings: Settings) -> Model:
     """Create a DeepSeek model instance."""
     # DeepSeek uses OpenAI-compatible API
-    return OpenAIModel(
-        model_name=settings.model_name,
+    provider = OpenAIProvider(
         base_url=settings.deepseek_base_url,
         api_key=settings.deepseek_api_key,
+    )
+    return OpenAIModel(
+        model_name=settings.model_name,
+        provider=provider,
     )
 
 
 def _create_ollama_model(settings: Settings) -> Model:
     """Create an Ollama model instance."""
     # Ollama also provides OpenAI-compatible API
-    return OpenAIModel(
-        model_name=settings.model_name,
+    provider = OpenAIProvider(
         base_url=f"{settings.ollama_base_url}/v1",
         api_key="ollama",  # Ollama doesn't require a real API key
+    )
+    return OpenAIModel(
+        model_name=settings.model_name,
+        provider=provider,
     )

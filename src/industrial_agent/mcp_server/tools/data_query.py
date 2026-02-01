@@ -15,7 +15,7 @@ from mcp.types import TextContent, Tool
 # Users should replace this with their actual data source
 SAMPLE_DATA = pd.DataFrame(
     {
-        "timestamp": pd.date_range(start="2024-01-01", periods=100, freq="H"),
+        "timestamp": pd.date_range(start="2024-01-01", periods=100, freq="h"),
         "product_id": [f"P{i % 10:03d}" for i in range(100)],
         "measurement_1": [10.0 + (i % 5) * 0.1 + (i % 3) * 0.05 for i in range(100)],
         "measurement_2": [5.0 + (i % 4) * 0.2 - (i % 2) * 0.1 for i in range(100)],
