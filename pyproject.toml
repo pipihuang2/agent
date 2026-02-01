@@ -1,0 +1,33 @@
+[project]
+name = "industrial-agent"
+version = "0.1.0"
+description = "Industrial quality inspection data analysis Agent based on pydantic-ai"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic-ai>=0.0.30",
+    "mcp>=1.0.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "matplotlib>=3.8.0",
+    "plotly>=5.18.0",
+    "httpx>=0.27.0",
+    "pydantic-settings>=2.1.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+industrial-agent = "industrial_agent.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/industrial_agent"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]

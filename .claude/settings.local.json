@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync:*)",
+      "Bash(where:*)",
+      "Bash(dir \"%LOCALAPPDATA%\\\\Programs\\\\uv\")",
+      "Bash(dir \"%USERPROFILE%\\\\.local\\\\bin\\\\uv*\")",
+      "Bash(dir \"%USERPROFILE%\\\\.cargo\\\\bin\\\\uv*\")",
+      "Bash(cmd /c \"python --version 2>&1\")",
+      "Bash(powershell:*)",
+      "Bash(/c/Users/Administrator/AppData/Local/Programs/Python/Python312/python.exe -m pip install:*)",
+      "Bash(/c/Users/Administrator/AppData/Local/Programs/Python/Python312/Scripts/uv.exe sync:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
