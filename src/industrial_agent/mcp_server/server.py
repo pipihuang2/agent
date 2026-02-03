@@ -39,6 +39,7 @@ class IndustrialMCPServer:
 
     def _setup_handlers(self) -> None:
         """Set up all tool handlers."""
+        from .tools.annotation_tools import AnnotationProcessor, get_annotation_processor
         from .tools.chart_generator import ChartGenerator, get_chart_generator
         from .tools.data_analysis import DataAnalyzer, get_analyzer
         from .tools.data_query import DataQueryManager, get_query_manager
@@ -581,6 +582,140 @@ class IndustrialMCPServer:
                         "required": ["table_name", "column"],
                     },
                 ),
+                # Annotation and Label Processing Tools
+                Tool(
+                    name="count_json_labels",
+                    description="Count and analyze labels/categories in JSON annotation files",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "directory": {
+                                "type": "string",
+                                "description": "Directory containing JSON annotation files",
+                            },
+                            "pattern": {
+                                "type": "string",
+                                "description": "File pattern to match (default: '*.json')",
+                                "default": "*.json",
+                            },
+                        },
+                        "required": ["directory"],
+                    },
+                ),
+                Tool(
+                    name="check_and_fix_image_paths",
+                    description="Check and update imagePath in JSON files to match actual image files",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "directory": {
+                                "type": "string",
+                                "description": "Directory containing JSON and image files",
+                            },
+                            "image_extensions": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Supported image extensions (default: ['.jpg', '.jpeg', '.bmp', '.png'])",
+                            },
+                        },
+                        "required": ["directory"],
+                    },
+                ),
+                Tool(
+                    name="convert_labels_to_ng",
+                    description="Convert Chinese defect labels to unified 'ng' (no good) labels",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "input_dir": {
+                                "type": "string",
+                                "description": "Input directory containing JSON files",
+                            },
+                            "output_dir": {
+                                "type": "string",
+                                "description": "Output directory (default: same as input_dir)",
+                            },
+                            "label_mapping": {
+                                "type": "object",
+                                "description": "Custom label mapping dictionary (source -> target)",
+                            },
+                        },
+                        "required": ["input_dir"],
+                    },
+                ),
+                Tool(
+                    name="convert_to_coco_format",
+                    description="Convert LabelMe JSON format to COCO format",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "source_dir": {
+                                "type": "string",
+                                "description": "Source directory containing JSON files",
+                            },
+                            "output_file": {
+                                "type": "string",
+                                "description": "Output COCO format JSON file path",
+                            },
+                            "label_mapping": {
+                                "type": "object",
+                                "description": "Custom label mapping dictionary",
+                            },
+                        },
+                        "required": ["source_dir", "output_file"],
+                    },
+                ),
+                Tool(
+                    name="split_dataset",
+                    description="Split dataset into train and validation sets (8:2 ratio by default)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "source_dir": {
+                                "type": "string",
+                                "description": "Source directory containing images and JSON files",
+                            },
+                            "train_ratio": {
+                                "type": "number",
+                                "description": "Ratio for training set (default: 0.8)",
+                                "default": 0.8,
+                            },
+                            "image_extension": {
+                                "type": "string",
+                                "description": "Image file extension to match (default: '.png')",
+                                "default": ".png",
+                            },
+                        },
+                        "required": ["source_dir"],
+                    },
+                ),
+                Tool(
+                    name="resize_dataset",
+                    description="Resize images and adjust annotation coordinates proportionally",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "input_dir": {
+                                "type": "string",
+                                "description": "Input directory containing images and JSON files",
+                            },
+                            "output_dir": {
+                                "type": "string",
+                                "description": "Output directory for resized data",
+                            },
+                            "scale": {
+                                "type": "number",
+                                "description": "Scale factor for resizing (default: 0.5)",
+                                "default": 0.5,
+                            },
+                            "label_mapping": {
+                                "type": "object",
+                                "description": "Custom label mapping dictionary",
+                            },
+                        },
+                        "required": ["input_dir", "output_dir"],
+                    },
+                ),
             ]
 
         @self.server.call_tool()
@@ -589,6 +724,7 @@ class IndustrialMCPServer:
             query_manager = get_query_manager()
             analyzer = get_analyzer()
             chart_generator = get_chart_generator()
+            annotation_processor = get_annotation_processor()
 
             result: dict[str, Any] = {}
 
@@ -746,6 +882,43 @@ class IndustrialMCPServer:
                     table_name=arguments["table_name"],
                     column=arguments["column"],
                     limit=arguments.get("limit", 10000),
+                )
+
+            # Annotation and Label Processing Tools
+            elif name == "count_json_labels":
+                result = annotation_processor.count_json_labels(
+                    directory=arguments["directory"],
+                    pattern=arguments.get("pattern", "*.json"),
+                )
+            elif name == "check_and_fix_image_paths":
+                result = annotation_processor.check_and_fix_image_paths(
+                    directory=arguments["directory"],
+                    image_extensions=arguments.get("image_extensions"),
+                )
+            elif name == "convert_labels_to_ng":
+                result = annotation_processor.convert_labels_to_ng(
+                    input_dir=arguments["input_dir"],
+                    output_dir=arguments.get("output_dir"),
+                    label_mapping=arguments.get("label_mapping"),
+                )
+            elif name == "convert_to_coco_format":
+                result = annotation_processor.convert_to_coco_format(
+                    source_dir=arguments["source_dir"],
+                    output_file=arguments["output_file"],
+                    label_mapping=arguments.get("label_mapping"),
+                )
+            elif name == "split_dataset":
+                result = annotation_processor.split_dataset(
+                    source_dir=arguments["source_dir"],
+                    train_ratio=arguments.get("train_ratio", 0.8),
+                    image_extension=arguments.get("image_extension", ".png"),
+                )
+            elif name == "resize_dataset":
+                result = annotation_processor.resize_dataset(
+                    input_dir=arguments["input_dir"],
+                    output_dir=arguments["output_dir"],
+                    scale=arguments.get("scale", 0.5),
+                    label_mapping=arguments.get("label_mapping"),
                 )
             else:
                 result = {"error": f"Unknown tool: {name}"}
