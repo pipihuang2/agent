@@ -44,6 +44,7 @@ class IndustrialMCPServer:
         from .tools.data_analysis import DataAnalyzer, get_analyzer
         from .tools.data_query import DataQueryManager, get_query_manager
         from .tools.mysql_query import MySQLQueryManager, get_mysql_manager
+        from .tools.yolo_training import YOLOTrainer, get_yolo_trainer
 
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
@@ -716,6 +717,329 @@ class IndustrialMCPServer:
                         "required": ["input_dir", "output_dir"],
                     },
                 ),
+                # YOLO Training Tools
+                Tool(
+                    name="yolo_train_detection",
+                    description="Train YOLO object detection model (synchronous). Blocks until training completes.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "data_yaml": {
+                                "type": "string",
+                                "description": "Path to YOLO data configuration file (data.yaml)",
+                            },
+                            "model_size": {
+                                "type": "string",
+                                "description": "Model size: n (nano), s (small), m (medium), l (large), x (extra large)",
+                                "default": "n",
+                            },
+                            "epochs": {
+                                "type": "integer",
+                                "description": "Number of training epochs",
+                                "default": 100,
+                            },
+                            "imgsz": {
+                                "type": "integer",
+                                "description": "Image size for training",
+                                "default": 640,
+                            },
+                            "batch": {
+                                "type": "integer",
+                                "description": "Batch size",
+                                "default": 16,
+                            },
+                            "project": {
+                                "type": "string",
+                                "description": "Project directory for organizing experiments",
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Experiment name",
+                            },
+                            "patience": {
+                                "type": "integer",
+                                "description": "Early stopping patience (epochs)",
+                                "default": 50,
+                            },
+                            "device": {
+                                "type": "string",
+                                "description": "Training device (auto/cpu/0/0,1 for GPU IDs)",
+                            },
+                            "pretrained": {
+                                "type": "boolean",
+                                "description": "Use pretrained weights",
+                                "default": True,
+                            },
+                        },
+                        "required": ["data_yaml"],
+                    },
+                ),
+                Tool(
+                    name="yolo_train_detection_async",
+                    description="Start YOLO object detection training in background (asynchronous). Returns immediately with training ID.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "data_yaml": {
+                                "type": "string",
+                                "description": "Path to YOLO data configuration file (data.yaml)",
+                            },
+                            "model_size": {
+                                "type": "string",
+                                "description": "Model size: n (nano), s (small), m (medium), l (large), x (extra large)",
+                                "default": "n",
+                            },
+                            "epochs": {
+                                "type": "integer",
+                                "description": "Number of training epochs",
+                                "default": 100,
+                            },
+                            "imgsz": {
+                                "type": "integer",
+                                "description": "Image size for training",
+                                "default": 640,
+                            },
+                            "batch": {
+                                "type": "integer",
+                                "description": "Batch size",
+                                "default": 16,
+                            },
+                            "project": {
+                                "type": "string",
+                                "description": "Project directory for organizing experiments",
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Experiment name",
+                            },
+                            "patience": {
+                                "type": "integer",
+                                "description": "Early stopping patience (epochs)",
+                                "default": 50,
+                            },
+                            "device": {
+                                "type": "string",
+                                "description": "Training device (auto/cpu/0/0,1 for GPU IDs)",
+                            },
+                            "pretrained": {
+                                "type": "boolean",
+                                "description": "Use pretrained weights",
+                                "default": True,
+                            },
+                        },
+                        "required": ["data_yaml"],
+                    },
+                ),
+                Tool(
+                    name="yolo_train_classification",
+                    description="Train YOLO classification model (synchronous). Blocks until training completes.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "data_dir": {
+                                "type": "string",
+                                "description": "Path to dataset directory containing train/ and val/ subdirectories",
+                            },
+                            "model_size": {
+                                "type": "string",
+                                "description": "Model size: n (nano), s (small), m (medium), l (large), x (extra large)",
+                                "default": "n",
+                            },
+                            "epochs": {
+                                "type": "integer",
+                                "description": "Number of training epochs",
+                                "default": 100,
+                            },
+                            "imgsz": {
+                                "type": "integer",
+                                "description": "Image size for training",
+                                "default": 224,
+                            },
+                            "batch": {
+                                "type": "integer",
+                                "description": "Batch size",
+                                "default": 32,
+                            },
+                            "project": {
+                                "type": "string",
+                                "description": "Project directory for organizing experiments",
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Experiment name",
+                            },
+                            "patience": {
+                                "type": "integer",
+                                "description": "Early stopping patience (epochs)",
+                                "default": 50,
+                            },
+                            "device": {
+                                "type": "string",
+                                "description": "Training device (auto/cpu/0/0,1 for GPU IDs)",
+                            },
+                            "pretrained": {
+                                "type": "boolean",
+                                "description": "Use pretrained weights",
+                                "default": True,
+                            },
+                        },
+                        "required": ["data_dir"],
+                    },
+                ),
+                Tool(
+                    name="yolo_train_classification_async",
+                    description="Start YOLO classification training in background (asynchronous). Returns immediately with training ID.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "data_dir": {
+                                "type": "string",
+                                "description": "Path to dataset directory containing train/ and val/ subdirectories",
+                            },
+                            "model_size": {
+                                "type": "string",
+                                "description": "Model size: n (nano), s (small), m (medium), l (large), x (extra large)",
+                                "default": "n",
+                            },
+                            "epochs": {
+                                "type": "integer",
+                                "description": "Number of training epochs",
+                                "default": 100,
+                            },
+                            "imgsz": {
+                                "type": "integer",
+                                "description": "Image size for training",
+                                "default": 224,
+                            },
+                            "batch": {
+                                "type": "integer",
+                                "description": "Batch size",
+                                "default": 32,
+                            },
+                            "project": {
+                                "type": "string",
+                                "description": "Project directory for organizing experiments",
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Experiment name",
+                            },
+                            "patience": {
+                                "type": "integer",
+                                "description": "Early stopping patience (epochs)",
+                                "default": 50,
+                            },
+                            "device": {
+                                "type": "string",
+                                "description": "Training device (auto/cpu/0/0,1 for GPU IDs)",
+                            },
+                            "pretrained": {
+                                "type": "boolean",
+                                "description": "Use pretrained weights",
+                                "default": True,
+                            },
+                        },
+                        "required": ["data_dir"],
+                    },
+                ),
+                Tool(
+                    name="yolo_get_training_status",
+                    description="Get status and progress of asynchronous YOLO training task",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "training_id": {
+                                "type": "string",
+                                "description": "Training task ID returned by async training functions",
+                            },
+                        },
+                        "required": ["training_id"],
+                    },
+                ),
+                Tool(
+                    name="yolo_create_detection_yaml",
+                    description="Create YAML configuration file for YOLO object detection training",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "train_dir": {
+                                "type": "string",
+                                "description": "Path to training images directory",
+                            },
+                            "val_dir": {
+                                "type": "string",
+                                "description": "Path to validation images directory",
+                            },
+                            "class_names": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "List of class names (e.g., ['class1', 'class2'])",
+                            },
+                            "output_path": {
+                                "type": "string",
+                                "description": "Output path for YAML file (optional)",
+                            },
+                        },
+                        "required": ["train_dir", "val_dir", "class_names"],
+                    },
+                ),
+                Tool(
+                    name="yolo_validate_model",
+                    description="Validate trained YOLO model on validation dataset",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "model_path": {
+                                "type": "string",
+                                "description": "Path to trained model file (.pt)",
+                            },
+                            "data_yaml": {
+                                "type": "string",
+                                "description": "Path to data configuration file (for detection) or data directory (for classification)",
+                            },
+                            "imgsz": {
+                                "type": "integer",
+                                "description": "Image size for validation",
+                                "default": 640,
+                            },
+                            "batch": {
+                                "type": "integer",
+                                "description": "Batch size",
+                                "default": 16,
+                            },
+                        },
+                        "required": ["model_path", "data_yaml"],
+                    },
+                ),
+                Tool(
+                    name="yolo_export_model",
+                    description="Export trained YOLO model to deployment format",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "model_path": {
+                                "type": "string",
+                                "description": "Path to trained model file (.pt)",
+                            },
+                            "format": {
+                                "type": "string",
+                                "description": "Export format: onnx, torchscript, openvino, engine (TensorRT)",
+                                "default": "onnx",
+                            },
+                            "imgsz": {
+                                "type": "integer",
+                                "description": "Image size for export",
+                                "default": 640,
+                            },
+                            "half": {
+                                "type": "boolean",
+                                "description": "Use FP16 half precision",
+                                "default": False,
+                            },
+                        },
+                        "required": ["model_path"],
+                    },
+                ),
             ]
 
         @self.server.call_tool()
@@ -725,6 +1049,7 @@ class IndustrialMCPServer:
             analyzer = get_analyzer()
             chart_generator = get_chart_generator()
             annotation_processor = get_annotation_processor()
+            yolo_trainer = get_yolo_trainer()
 
             result: dict[str, Any] = {}
 
@@ -919,6 +1244,85 @@ class IndustrialMCPServer:
                     output_dir=arguments["output_dir"],
                     scale=arguments.get("scale", 0.5),
                     label_mapping=arguments.get("label_mapping"),
+                )
+
+            # YOLO Training Tools
+            elif name == "yolo_train_detection":
+                result = yolo_trainer.train_detection(
+                    data_yaml=arguments["data_yaml"],
+                    model_size=arguments.get("model_size", "n"),
+                    epochs=arguments.get("epochs", 100),
+                    imgsz=arguments.get("imgsz", 640),
+                    batch=arguments.get("batch", 16),
+                    project=arguments.get("project"),
+                    name=arguments.get("name"),
+                    patience=arguments.get("patience", 50),
+                    device=arguments.get("device"),
+                    pretrained=arguments.get("pretrained", True),
+                )
+            elif name == "yolo_train_detection_async":
+                result = yolo_trainer.train_detection_async(
+                    data_yaml=arguments["data_yaml"],
+                    model_size=arguments.get("model_size", "n"),
+                    epochs=arguments.get("epochs", 100),
+                    imgsz=arguments.get("imgsz", 640),
+                    batch=arguments.get("batch", 16),
+                    project=arguments.get("project"),
+                    name=arguments.get("name"),
+                    patience=arguments.get("patience", 50),
+                    device=arguments.get("device"),
+                    pretrained=arguments.get("pretrained", True),
+                )
+            elif name == "yolo_train_classification":
+                result = yolo_trainer.train_classification(
+                    data_dir=arguments["data_dir"],
+                    model_size=arguments.get("model_size", "n"),
+                    epochs=arguments.get("epochs", 100),
+                    imgsz=arguments.get("imgsz", 224),
+                    batch=arguments.get("batch", 32),
+                    project=arguments.get("project"),
+                    name=arguments.get("name"),
+                    patience=arguments.get("patience", 50),
+                    device=arguments.get("device"),
+                    pretrained=arguments.get("pretrained", True),
+                )
+            elif name == "yolo_train_classification_async":
+                result = yolo_trainer.train_classification_async(
+                    data_dir=arguments["data_dir"],
+                    model_size=arguments.get("model_size", "n"),
+                    epochs=arguments.get("epochs", 100),
+                    imgsz=arguments.get("imgsz", 224),
+                    batch=arguments.get("batch", 32),
+                    project=arguments.get("project"),
+                    name=arguments.get("name"),
+                    patience=arguments.get("patience", 50),
+                    device=arguments.get("device"),
+                    pretrained=arguments.get("pretrained", True),
+                )
+            elif name == "yolo_get_training_status":
+                result = yolo_trainer.get_training_status(
+                    training_id=arguments["training_id"]
+                )
+            elif name == "yolo_create_detection_yaml":
+                result = yolo_trainer.create_detection_yaml(
+                    train_dir=arguments["train_dir"],
+                    val_dir=arguments["val_dir"],
+                    class_names=arguments["class_names"],
+                    output_path=arguments.get("output_path"),
+                )
+            elif name == "yolo_validate_model":
+                result = yolo_trainer.validate_model(
+                    model_path=arguments["model_path"],
+                    data_yaml=arguments["data_yaml"],
+                    imgsz=arguments.get("imgsz", 640),
+                    batch=arguments.get("batch", 16),
+                )
+            elif name == "yolo_export_model":
+                result = yolo_trainer.export_model(
+                    model_path=arguments["model_path"],
+                    format=arguments.get("format", "onnx"),
+                    imgsz=arguments.get("imgsz", 640),
+                    half=arguments.get("half", False),
                 )
             else:
                 result = {"error": f"Unknown tool: {name}"}

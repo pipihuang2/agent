@@ -89,6 +89,20 @@ class Settings(BaseSettings):
         description="MySQL database name",
     )
 
+    # YOLO Training Configuration
+    yolo_output_dir: Path = Field(
+        default=Path("./output/yolo_training"),
+        description="YOLO training output directory",
+    )
+    yolo_device: str = Field(
+        default="auto",
+        description="Training device (auto, cpu, 0, 0,1)",
+    )
+    yolo_workers: int = Field(
+        default=8,
+        description="Data loading workers",
+    )
+
     def get_mysql_url(self) -> str:
         """Get MySQL connection URL for SQLAlchemy."""
         password = self.mysql_password or ""
